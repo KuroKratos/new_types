@@ -1,0 +1,38 @@
+-- Sharing metadata (25-community-and-ecosystem.md 3.2).  Read by tooling
+-- and the manager detail pane; never by the loader's merge.
+return {
+  summary = "Adds DARK, STEEL and FAIRY on the modern chart, with their moves and ways to learn them.",
+  author = "Pokemon Gen 1 Recompilation Project",
+  contact = "https://github.com/bryanthaboi/gen1recomp",
+  tags = { "types", "battle", "mechanic", "rebalance", "overhaul" },
+  differences = {
+    changed = {
+      "three new types on the Gen 6 chart, including the PSYCHIC immunity of DARK, the POISON immunity of STEEL and the DRAGON immunity of FAIRY",
+      "the four cells Gen 2 corrected: GHOST now hits PSYCHIC for 2x instead of 0, BUG into POISON drops to 0.5x, POISON into BUG becomes neutral, ICE into FIRE drops to 0.5x",
+      "eleven species retyped: MAGNEMITE and MAGNETON gain STEEL, CLEFAIRY CLEFABLE JIGGLYPUFF WIGGLYTUFF and MR_MIME gain FAIRY, MEOWTH PERSIAN GRIMER and MUK gain DARK",
+      "BITE is DARK instead of NORMAL, as Gen 2 made it",
+      "the bag holds 100 items instead of 20, because thirteen new machines cannot fit otherwise",
+    },
+    added = {
+      "13 moves: CRUNCH FAINT_ATTACK PURSUIT, METAL_CLAW STEEL_WING IRON_TAIL, FAIRY_WIND DISARMING_VOICE DRAINING_KISS DAZZLING_GLEAM MOONBLAST PLAY_ROUGH CHARM",
+      "a machine for each, eight of them on Celadon's TM counter and four given by NPCs the mod places itself",
+      "four new NPCs, each with its own sprite, text constant and once-only flag: a scientist inside the POWER_PLANT (IRON_TAIL), a little girl in MT_MOON_1F (MOONBLAST), a Rocket grunt in CELADON_CITY (CRUNCH) and a beauty in FUCHSIA_CITY (PLAY_ROUGH). No vanilla character loses a line",
+      "two secondary effects the engine had no equivalent of, for the stat-raising STEEL moves",
+      "NEW TYPES / NEW TMS / BIG BAG rows in OPTIONS, and a TYPE CHART choice between GEN6 and GEN1",
+    },
+    known = {
+      "physical/special follows the TYPE, as everywhere else in this engine: DARK and FAIRY are special, STEEL is physical. BITE, CRUNCH and PLAY_ROUGH therefore hit off Special here where the modern games make them physical -- a deliberate consequence of staying Gen 1 shaped",
+      "no Gen 1 species is DARK even today, so MEOWTH PERSIAN GRIMER and MUK follow their ALOLAN forms, which are official typings of those species; RATTATA and RATICATE were left out on purpose, their Alolan form being Dark/Normal and immune to both PSYCHIC and GHOST far too early",
+      "a Pokemon of one of the new types cannot round-trip through a Game Boy .sav: GenSave's type table is hard-coded and unaware of the registry, so it exports as NORMAL",
+      "affects_link stays true: type_chart, moves and pokemon are all on the link surface and the handshake hashes every type's category, so this cannot pair with a vanilla build",
+      "the four NPCs hand over a machine rather than teaching directly; a true move tutor needs a custom command and a party-menu flow this mod does not carry",
+      "a giver whose map is absent from the merged dataset is skipped with a warning, which is what happens on the CI fixture or a total conversion; on any real Red/Blue/Yellow import all four are placed",
+      "PURSUIT lands as a plain 40-power move -- its real doubling against a switching target has no seam to hang on -- and DRAINING_KISS drains the engine's Gen 1 half rather than Gen 6's three quarters",
+      "machine numbers run past 55, which is where the .sav crosswalk stops having room; harmless here since these machines teach moves that cannot be exported anyway",
+    },
+  },
+  credits = {
+    { who = "pret/pokered", for_ = "the type table, move and species data this extends" },
+  },
+  compat = { engine = ">=1.0.0 <2.0.0", modApi = 2 },
+}
