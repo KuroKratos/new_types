@@ -3,6 +3,30 @@
 Format: [keep a changelog](https://keepachangelog.com/en/1.1.0/).
 Version headings match `manifest.json`'s `version`.
 
+## 1.2.0
+
+### Added
+
+- **Gold support** (`"games": ["gen1", "gen2"]`) — **FAIRY only**. Gold already
+  ships DARK and STEEL, so registering them again would fight the cart for the
+  category that decides physical/special.
+
+### Changed
+
+- A chart cell is written only when one of its two sides is a type this mod
+  actually introduced. Gold carries the **Gen 2** chart, where STEEL resists
+  GHOST and DARK; this mod carries Gen 6, where it does not. Writing our cells
+  over a type we did not introduce would have quietly rebalanced a game that
+  never asked for it. Verified against the real Gold table: **zero vanilla
+  cells changed**.
+- The four Gen 1 corrections apply only where this mod introduced DARK and
+  STEEL — that is, on Red/Blue/Yellow. Gold made those corrections itself.
+- Move effects are translated per game. Gold names its own (`EFFECT_NORMAL_HIT`
+  where Gen 1 says `NO_ADDITIONAL_EFFECT`), and it already carries the two
+  stat-UP side effects Gen 1 lacks, so this mod's custom pair is Gen 1 only.
+- A move the cart already has is left alone: Gold's own CRUNCH and IRON_TAIL
+  stay its own.
+
 ## 1.1.0
 
 ### Changed

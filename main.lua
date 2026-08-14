@@ -227,14 +227,35 @@ return function(mod)
   -- ------------------------------------------------------------------
   -- The types
 
+  -- Which types this mod actually brought into existence. On Red/Blue/Yellow
+  -- that is all three; on Gold it is FAIRY alone, because the cart already
+  -- ships DARK and STEEL (src/battle/gen2/Battle.lua:491 lists them).
+  --
+  -- The distinction matters far more for the CHART than for the records. Gold
+  -- carries the Gen 2 chart, where STEEL resists GHOST and DARK; this mod
+  -- carries Gen 6, where it does not. Writing our cells over a type we did not
+  -- introduce would quietly rebalance a game that never asked for it.
+  local introduced = {}
+
   for id, record in pairs(TYPES) do
     if mod.content.type_chart:get(id) then
-      -- another mod got here first; leave its record alone rather than
-      -- fight over the category, which decides physical/special
-      mod.log:warn("%s is already registered; keeping the existing record", id)
+      -- another mod, or the cart itself, got here first; leave its record
+      -- alone rather than fight over the category, which decides
+      -- physical/special
+      mod.log:info("%s is already in this game's chart; left untouched", id)
     else
       mod.content.type_chart:register(id, record)
+      introduced[id] = true
     end
+  end
+
+  -- A cell is ours to write only if one of its two sides is a type we just
+  -- created. FAIRY>DARK and STEEL>FAIRY are ours on Gold; DARK>PSYCHIC_TYPE
+  -- is not, and neither are the Gen 1 corrections, which Gold made long ago.
+  local function ours(id)
+    local attacker, defender = id:match("^([^>]+)>(.+)$")
+    if not attacker then return introduced[id] == true end
+    return introduced[attacker] == true or introduced[defender] == true
   end
 
   -- ------------------------------------------------------------------
@@ -259,12 +280,33 @@ return function(mod)
     end
   end
 
-  for _, cell in ipairs(CELLS) do setCell(cell[1], cell[2]) end
+  local wrote, left = 0, 0
+  for _, cell in ipairs(CELLS) do
+    if ours(cell[1]) then
+      setCell(cell[1], cell[2])
+      wrote = wrote + 1
+    else
+      left = left + 1
+    end
+  end
 
-  if mod.options:get("chart") ~= "gen1" then
+  -- The four Gen 1 corrections are Gen 2's own doing: Gold already hits
+  -- PSYCHIC with GHOST for 2x. Applying them only where a type we introduced
+  -- is involved means they fire on Red/Blue/Yellow and stay out of Gold's way.
+  -- Every fix touches two VANILLA types, so `ours` can never be true for one.
+  -- The right question is whether this game still needs them: a cart that
+  -- already had DARK and STEEL is a Gen 2 cart, and Gen 2 is where these four
+  -- corrections came from in the first place.
+  if mod.options:get("chart") ~= "gen1" and introduced.DARK and introduced.STEEL then
     for _, fix in ipairs(FIXES) do
       if fix[2] == nil then clearCell(fix[1]) else setCell(fix[1], fix[2]) end
     end
+  end
+  if left > 0 then
+    mod.log:info("%d chart cells written, %d left to this game's own chart",
+                 wrote, left)
+  else
+    mod.log:info("%d chart cells written", wrote)
   end
 
   -- ------------------------------------------------------------------
@@ -317,14 +359,61 @@ return function(mod)
   -- ------------------------------------------------------------------
   -- The moves
 
+  -- Gold names its effects in its own namespace, and every one of these is a
+  -- move Gen 2 already had a behaviour for -- so this is a translation, not an
+  -- invention. Gold even carries the two stat-UP side effects Gen 1 lacked,
+  -- which is why this mod's custom pair is Gen 1-only.
+  local EFFECT_ON_GEN2 = {
+    NO_ADDITIONAL_EFFECT      = "EFFECT_NORMAL_HIT",
+    SWIFT_EFFECT              = "EFFECT_ALWAYS_HIT",
+    DRAIN_HP_EFFECT           = "EFFECT_LEECH_HIT",
+    SPECIAL_DOWN_SIDE_EFFECT  = "EFFECT_SP_DEF_DOWN_HIT",
+    ATTACK_DOWN_SIDE_EFFECT   = "EFFECT_ATTACK_DOWN_HIT",
+    DEFENSE_DOWN_SIDE_EFFECT  = "EFFECT_DEFENSE_DOWN_HIT",
+    ATTACK_DOWN1_EFFECT       = "EFFECT_ATTACK_DOWN",
+    FLINCH_SIDE_EFFECT1       = "EFFECT_FLINCH_HIT",
+    NEW_TYPES_ATTACK_UP_SIDE  = "EFFECT_ATTACK_UP_HIT",
+    NEW_TYPES_DEFENSE_UP_SIDE = "EFFECT_DEFENSE_UP_HIT",
+  }
+
+  -- Resolve an effect id against THIS game's registry, translating only when
+  -- the id the table names is not there. A move whose behaviour neither game
+  -- can supply is skipped by name rather than registered with a dangling
+  -- reference, which would fail cross-validation at load.
+  -- Prefer the id this game actually knows, then the translation, then the id
+  -- as written. Never nil: dropping the move would leave its TM and every
+  -- tmhm entry pointing at a name nothing defines, which is a worse failure
+  -- than an effect id that cross-validation can name for you.
+  local function effectFor(move)
+    if mod.content.move_effects:get(move.effect) then return move.effect end
+    local alias = EFFECT_ON_GEN2[move.effect]
+    if alias and mod.content.move_effects:get(alias) then return alias end
+    return alias or move.effect
+  end
+
   local added = 0
+  local untranslatable = {}
   for _, move in ipairs(MOVES) do
     if mod.content.moves:get(move.id) then
-      mod.log:warn("move %s already exists; left alone", move.id)
+      -- Gold already ships CRUNCH, IRON_TAIL, METAL_CLAW and friends; its
+      -- versions are the cart's own and stay untouched.
+      mod.log:info("move %s already exists in this game; left alone", move.id)
     else
-      mod.content.moves:register(move.id, move)
-      added = added + 1
+      local effect = effectFor(move)
+      if not effect then
+        untranslatable[#untranslatable + 1] = move.id
+      else
+        local record = {}
+        for k, v in pairs(move) do record[k] = v end
+        record.effect = effect
+        mod.content.moves:register(move.id, record)
+        added = added + 1
+      end
     end
+  end
+  if #untranslatable > 0 then
+    mod.log:info("%d moves need an effect this game has no equivalent for: %s",
+                 #untranslatable, table.concat(untranslatable, " "))
   end
 
   -- BITE is the one retcon: Gen 1 ships it as NORMAL, Gen 2 moved it to
